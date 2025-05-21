@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Branch",
+  "version": "1.0",
+  "description": "Branch Claude conversations into new tabs",
+  "permissions": ["scripting", "tabs", "activeTab", "storage"],
+  "host_permissions": ["https://*.anthropic.com/*", "https://claude.ai/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://*.anthropic.com/*", "https://claude.ai/*"],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ],
+  "action": {
+    "default_icon": "icon.png"
+  },
+  "icons": {
+    "128": "icon.png"
+  }
+}
