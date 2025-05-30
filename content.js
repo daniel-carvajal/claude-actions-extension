@@ -1,6 +1,10 @@
 // This script will be injected into the Claude webpage
 console.log("Claude Branch Extension initialized");
 
+let menuVisible = false;
+
+let xOffset = 60
+
 // Add a floating button
 function addFloatingButton() {
     // Remove any existing button first to avoid duplicates
@@ -12,51 +16,50 @@ function addFloatingButton() {
     // Create the button element
     const button = document.createElement('button');
     button.id = 'claude-branch-btn';
-    button.innerHTML = '🌿 Branch';
-    button.title = 'Branch conversation to new tab';
+    button.innerHTML = '🌿';
+    button.title = 'Branch conversation options';
 
     // Apply styling for a nice floating button
     button.style.cssText = `
     position: fixed;
     bottom: 20px;
-    left: 20px;
+    left: ${20 + xOffset}px;
     background-color: #e18a6c;
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 8px 16px;
-    font-size: 14px;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     z-index: 10000;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
   `;
 
     // Add hover effects
     button.addEventListener('mouseover', () => {
         button.style.backgroundColor = '#c97c60';
-        button.style.transform = 'scale(1.05)';
+        button.style.transform = 'scale(1.1)';
+        button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
     });
 
     button.addEventListener('mouseout', () => {
-        button.style.backgroundColor = '#e18a6c';
-        button.style.transform = 'scale(1)';
+        if (!menuVisible) {
+            button.style.backgroundColor = '#e18a6c';
+            button.style.transform = 'scale(1)';
+            button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        }
     });
 
-    // Add active effect
-    button.addEventListener('mousedown', () => {
-        button.style.transform = 'scale(0.95)';
+    // Add click handler to toggle menu
+    button.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleBranchMenu();
     });
-
-    button.addEventListener('mouseup', () => {
-        button.style.transform = 'scale(1)';
-    });
-
-    // Add click handler
-    button.addEventListener('click', branchConversation);
 
     // Add to the page
     document.body.appendChild(button);
@@ -68,7 +71,7 @@ function addFloatingButton() {
     statusIndicator.style.cssText = `
         position: fixed;
         bottom: 20px;
-        left: 120px;
+        left: ${80 + xOffset}px;
         background-color: #333;
         color: white;
         border-radius: 8px;
@@ -82,6 +85,229 @@ function addFloatingButton() {
     `;
     document.body.appendChild(statusIndicator);
 }
+
+// Create the fan menu
+function createBranchMenu() {
+    // Remove existing menu if it exists
+    const existingMenu = document.querySelector('#claude-branch-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+
+    const menuContainer = document.createElement('div');
+    menuContainer.id = 'claude-branch-menu';
+    menuContainer.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: ${20 + xOffset}px;
+        pointer-events: none;
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+
+    // Menu options with their positions in a semi-circle
+    const menuOptions = [
+        { 
+            icon: '🌿', 
+            label: 'Branch Current', 
+            action: () => branchConversation(),
+            angle: 45 
+        },
+        { 
+            icon: '✂️', 
+            label: 'Branch from Here', 
+            action: () => branchFromSelection(),
+            angle: 90 
+        },
+        { 
+            icon: '🔄', 
+            label: 'Branch & Reset', 
+            action: () => branchAndReset(),
+            angle: 135 
+        },
+        { 
+            icon: '💾', 
+            label: 'Save Branch', 
+            action: () => saveBranch(),
+            angle: 180 
+        }
+    ];
+
+    const radius = 80;
+
+    menuOptions.forEach((option, index) => {
+        const menuItem = document.createElement('div');
+        menuItem.className = 'branch-menu-item';
+
+        // Calculate position using polar coordinates
+        const angleRad = (option.angle * Math.PI) / 180;
+        const x = -Math.cos(angleRad) * radius;
+        const y = -Math.sin(angleRad) * radius; // Negative because CSS y increases downward
+        
+        menuItem.style.cssText = `
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            width: 44px;
+            height: 44px;
+            background-color: #2d2d2d;
+            border: 2px solid #e18a6c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            transform: translate(${x}px, ${y}px) scale(0);
+            pointer-events: auto;
+            user-select: none;
+        `;
+        
+        menuItem.innerHTML = option.icon;
+        menuItem.title = option.label;
+        
+        // Add hover effects
+        menuItem.addEventListener('mouseover', () => {
+            menuItem.style.backgroundColor = '#3d3d3d';
+            menuItem.style.transform = `translate(${x}px, ${y}px) scale(1.15)`;
+            menuItem.style.borderColor = '#c97c60';
+            
+            // Show tooltip
+            showTooltip(menuItem, option.label);
+        });
+        
+        menuItem.addEventListener('mouseout', () => {
+            menuItem.style.backgroundColor = '#2d2d2d';
+            menuItem.style.transform = `translate(${x}px, ${y}px) scale(1)`;
+            menuItem.style.borderColor = '#e18a6c';
+            
+            // Hide tooltip
+            hideTooltip();
+        });
+        
+        // Add click handler
+        menuItem.addEventListener('click', (e) => {
+            e.stopPropagation();
+            option.action();
+            hideBranchMenu();
+        });
+        
+        menuContainer.appendChild(menuItem);
+        
+        // Animate in with staggered delay
+        setTimeout(() => {
+            menuItem.style.transform = `translate(${x}px, ${y}px) scale(1)`;
+        }, index * 50);
+    });
+
+    document.body.appendChild(menuContainer);
+    
+    // Show the menu container
+    setTimeout(() => {
+        menuContainer.style.opacity = '1';
+    }, 10);
+
+    return menuContainer;
+}
+
+// Show tooltip for menu items
+function showTooltip(element, text) {
+    hideTooltip(); // Remove any existing tooltip
+    
+    const tooltip = document.createElement('div');
+    tooltip.id = 'branch-menu-tooltip';
+    tooltip.textContent = text;
+    tooltip.style.cssText = `
+        position: fixed;
+        background-color: #1a1a1a;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 10001;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    `;
+    
+    document.body.appendChild(tooltip);
+    
+    // Position tooltip near the element
+    const rect = element.getBoundingClientRect();
+    tooltip.style.left = `${rect.right + 10}px`;
+    tooltip.style.top = `${rect.top + (rect.height / 2) - (tooltip.offsetHeight / 2)}px`;
+    
+    // Show tooltip
+    setTimeout(() => {
+        tooltip.style.opacity = '1';
+    }, 100);
+}
+
+// Hide tooltip
+function hideTooltip() {
+    const tooltip = document.querySelector('#branch-menu-tooltip');
+    if (tooltip) {
+        tooltip.remove();
+    }
+}
+
+// Toggle the branch menu
+function toggleBranchMenu() {
+    if (menuVisible) {
+        hideBranchMenu();
+    } else {
+        showBranchMenu();
+    }
+}
+
+// Show the branch menu
+function showBranchMenu() {
+    createBranchMenu();
+    menuVisible = true;
+    
+    // Update button appearance
+    const button = document.querySelector('#claude-branch-btn');
+    if (button) {
+        button.style.backgroundColor = '#c97c60';
+        button.style.transform = 'scale(1.1) rotate(45deg)';
+        button.style.boxShadow = '0 6px 16px rgba(0,0,0,0.4)';
+    }
+}
+
+// Hide the branch menu
+function hideBranchMenu() {
+    const menu = document.querySelector('#claude-branch-menu');
+    if (menu) {
+        menu.style.opacity = '0';
+        setTimeout(() => {
+            menu.remove();
+        }, 300);
+    }
+    
+    hideTooltip();
+    menuVisible = false;
+    
+    // Reset button appearance
+    const button = document.querySelector('#claude-branch-btn');
+    if (button) {
+        button.style.backgroundColor = '#e18a6c';
+        button.style.transform = 'scale(1) rotate(0deg)';
+        button.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+    }
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (menuVisible && !e.target.closest('#claude-branch-btn') && !e.target.closest('#claude-branch-menu')) {
+        hideBranchMenu();
+    }
+});
 
 // Function to show status message instead of alert
 function showStatus(message, duration = 3000) {
@@ -152,27 +378,20 @@ function extractConversationContext() {
     return conversationContext;
 }
 
-// Function to branch the conversation into a new tab
+// Original branch function - branches entire conversation
 function branchConversation() {
-    console.log("Branch button clicked");
+    console.log("Branch Current clicked");
 
-    // Extract the current conversation
     const conversationContext = extractConversationContext();
 
     if (conversationContext.length > 0) {
         console.log("Extracted conversation context");
 
-        // Create the prompt for the new conversation
         const branchPrompt = `This conversation serves as a branch of a previous conversation. Here's the context of that conversation:\n\n${conversationContext}\n\nNow, let's continue from here:`;
 
-        // Store the prompt in localStorage
         localStorage.setItem('claudeBranchPrompt', branchPrompt);
-        
-        // Show status message
-        showStatus("Branching conversation to new tab...");
+        showStatus("Branching entire conversation...");
 
-        // Open a new Claude tab with the correct URL
-        // Use a short timeout to let the localStorage operation complete
         setTimeout(() => {
             const claudeUrl = "https://claude.ai/new";
             window.open(claudeUrl, '_blank');
@@ -183,18 +402,37 @@ function branchConversation() {
     }
 }
 
+// Branch from current selection or cursor position
+function branchFromSelection() {
+    console.log("Branch from Here clicked");
+    showStatus("Branch from selection - Feature coming soon!", 2000);
+    // TODO: Implement selection-based branching
+}
+
+// Branch and reset the current conversation
+function branchAndReset() {
+    console.log("Branch & Reset clicked");
+    showStatus("Branch & Reset - Feature coming soon!", 2000);
+    // TODO: Implement branch and reset functionality
+}
+
+// Save current branch state
+function saveBranch() {
+    console.log("Save Branch clicked");
+    showStatus("Save Branch - Feature coming soon!", 2000);
+    // TODO: Implement branch saving functionality
+}
+
 // For new chat pages, check if we should load a branch prompt
 function checkForBranchPrompt() {
     if (window.location.href.includes('/new')) {
         console.log("Detected new chat page, checking for branch prompt");
 
-        // Try to get the stored prompt
         const branchPrompt = localStorage.getItem('claudeBranchPrompt');
 
         if (branchPrompt) {
             console.log("Found stored branch prompt");
             
-            // Add a visual indicator that we're loading the prompt
             const loadingIndicator = document.createElement('div');
             loadingIndicator.textContent = "Loading branched conversation...";
             loadingIndicator.style.cssText = `
@@ -210,33 +448,22 @@ function checkForBranchPrompt() {
             `;
             document.body.appendChild(loadingIndicator);
 
-            // Function to insert the prompt into the textarea
             function insertPrompt() {
                 const textarea = document.querySelector('textarea, [role="textbox"], [contenteditable="true"]');
 
                 if (textarea) {
-                    // For contenteditable elements
                     if (textarea.getAttribute('contenteditable') === 'true') {
                         textarea.innerHTML = branchPrompt;
                     } else {
-                        // For regular textareas
                         textarea.value = branchPrompt;
                     }
 
-                    // Try to trigger input events to update UI
                     textarea.dispatchEvent(new Event('input', { bubbles: true }));
                     textarea.dispatchEvent(new Event('change', { bubbles: true }));
 
-                    // Clear the stored prompt to avoid reusing it
                     localStorage.removeItem('claudeBranchPrompt');
-
-                    // Scroll to the end of the textarea
                     textarea.scrollTop = textarea.scrollHeight;
-
-                    // Try to focus the textarea
                     textarea.focus();
-
-                    // Remove the loading indicator
                     loadingIndicator.remove();
                     
                     console.log("Inserted branch prompt into new chat");
@@ -246,7 +473,6 @@ function checkForBranchPrompt() {
                 return false;
             }
 
-            // Try to insert the prompt with increasing delays
             if (!insertPrompt()) {
                 setTimeout(() => {
                     if (!insertPrompt()) {
@@ -267,12 +493,9 @@ function initialize() {
     // Add the floating button on conversation pages
     if (!window.location.href.includes('/new')) {
         addFloatingButton();
-
-        // Keep checking to ensure button stays on page
         setInterval(addFloatingButton, 3000);
     }
 
-    // Check if this is a new chat page that should receive a branch prompt
     checkForBranchPrompt();
 }
 
@@ -283,8 +506,5 @@ if (document.readyState === 'loading') {
     initialize();
 }
 
-// Also run when window is fully loaded
 window.addEventListener('load', initialize);
-
-// Run now to ensure we don't miss anything
 setTimeout(initialize, 1000);
