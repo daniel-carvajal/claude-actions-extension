@@ -2,8 +2,35 @@
 console.log("Claude Branch Extension initialized");
 
 let menuVisible = false;
+let xOffset = 60;
 
-let xOffset = 60
+// ===== CENTRALIZED MENU CONFIGURATION =====
+const MENU_ACTIONS = {
+    branch: {
+        icon: '🌿',
+        label: 'Branch',
+        angle: 45,
+        action: () => showBranchModal()
+    },
+    branchAndReset: {
+        icon: '🔄',
+        label: 'Action 1',
+        angle: 90,
+        action: () => branchAndReset()
+    },
+    saveBranch: {
+        icon: '💾',
+        label: 'Action 2',
+        angle: 135,
+        action: () => saveBranch()
+    },
+    extraOption: {
+        icon: '⚙️',
+        label: 'Action 3',
+        angle: 180,
+        action: () => showSettings()
+    }
+};
 
 // Add a floating button
 function addFloatingButton() {
@@ -106,37 +133,9 @@ function createBranchMenu() {
         transition: opacity 0.3s ease;
     `;
 
-    // Menu options with their positions in a semi-circle
-    const menuOptions = [
-        { 
-            icon: '🌿', 
-            label: 'Branch Current', 
-            action: () => branchConversation(),
-            angle: 45 
-        },
-        { 
-            icon: '✂️', 
-            label: 'Branch from Here', 
-            action: () => branchFromSelection(),
-            angle: 90 
-        },
-        { 
-            icon: '🔄', 
-            label: 'Branch & Reset', 
-            action: () => branchAndReset(),
-            angle: 135 
-        },
-        { 
-            icon: '💾', 
-            label: 'Save Branch', 
-            action: () => saveBranch(),
-            angle: 180 
-        }
-    ];
-
     const radius = 80;
 
-    menuOptions.forEach((option, index) => {
+    Object.values(MENU_ACTIONS).forEach((option, index) => {
         const menuItem = document.createElement('div');
         menuItem.className = 'branch-menu-item';
 
@@ -213,6 +212,244 @@ function createBranchMenu() {
 
     return menuContainer;
 }
+
+// Show the branch modal with sub-options
+function showBranchModal() {
+    // Remove any existing modal
+    const existingModal = document.querySelector('#claude-branch-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Create modal backdrop
+    const modalBackdrop = document.createElement('div');
+    modalBackdrop.id = 'claude-branch-modal';
+    modalBackdrop.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background-color: #2d2d2d;
+        border-radius: 12px;
+        padding: 24px;
+        min-width: 300px;
+        max-width: 400px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        color: white;
+        transform: scale(0.8);
+        transition: transform 0.3s ease;
+    `;
+
+    // Modal title
+    const title = document.createElement('h3');
+    title.textContent = 'Branch Conversation';
+    title.style.cssText = `
+        margin: 0 0 20px 0;
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        color: #e18a6c;
+    `;
+
+    // Modal description
+    const description = document.createElement('p');
+    description.textContent = 'Choose how you want to branch this conversation:';
+    description.style.cssText = `
+        margin: 0 0 24px 0;
+        font-size: 14px;
+        color: #ccc;
+        text-align: center;
+    `;
+
+    // Branch options container
+    const optionsContainer = document.createElement('div');
+    optionsContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    `;
+
+    // Branch whole conversation option
+    const wholeBranchOption = createModalOption(
+        '🌿',
+        'Branch Entire Conversation',
+        'Start a new chat with the full conversation history',
+        () => {
+            closeBranchModal();
+            branchConversation();
+        }
+    );
+
+    // Branch from here option
+    const fromHereBranchOption = createModalOption(
+        '✂️',
+        'Branch from Selection',
+        'Branch from a specific point in the conversation',
+        () => {
+            closeBranchModal();
+            branchFromSelection();
+        }
+    );
+
+    // Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.cssText = `
+        margin-top: 16px;
+        padding: 8px 16px;
+        background-color: transparent;
+        border: 1px solid #666;
+        border-radius: 6px;
+        color: #ccc;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    `;
+
+    cancelButton.addEventListener('mouseover', () => {
+        cancelButton.style.backgroundColor = '#3d3d3d';
+        cancelButton.style.borderColor = '#888';
+    });
+
+    cancelButton.addEventListener('mouseout', () => {
+        cancelButton.style.backgroundColor = 'transparent';
+        cancelButton.style.borderColor = '#666';
+    });
+
+    cancelButton.addEventListener('click', closeBranchModal);
+
+    // Assemble modal
+    optionsContainer.appendChild(wholeBranchOption);
+    optionsContainer.appendChild(fromHereBranchOption);
+    
+    modalContent.appendChild(title);
+    modalContent.appendChild(description);
+    modalContent.appendChild(optionsContainer);
+    modalContent.appendChild(cancelButton);
+    
+    modalBackdrop.appendChild(modalContent);
+    document.body.appendChild(modalBackdrop);
+
+    // Show modal with animation
+    setTimeout(() => {
+        modalBackdrop.style.opacity = '1';
+        modalContent.style.transform = 'scale(1)';
+    }, 10);
+
+    // Close modal when clicking backdrop
+    modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) {
+            closeBranchModal();
+        }
+    });
+
+    // Prevent modal content clicks from closing modal
+    modalContent.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+}
+
+// Create a modal option button
+function createModalOption(icon, title, description, action) {
+    const option = document.createElement('div');
+    option.style.cssText = `
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        background-color: #3d3d3d;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    `;
+
+    const iconEl = document.createElement('div');
+    iconEl.textContent = icon;
+    iconEl.style.cssText = `
+        font-size: 24px;
+        margin-right: 16px;
+        flex-shrink: 0;
+    `;
+
+    const textContainer = document.createElement('div');
+    textContainer.style.cssText = `
+        flex: 1;
+    `;
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = title;
+    titleEl.style.cssText = `
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        color: white;
+    `;
+
+    const descEl = document.createElement('div');
+    descEl.textContent = description;
+    descEl.style.cssText = `
+        font-size: 13px;
+        color: #aaa;
+        line-height: 1.4;
+    `;
+
+    textContainer.appendChild(titleEl);
+    textContainer.appendChild(descEl);
+    
+    option.appendChild(iconEl);
+    option.appendChild(textContainer);
+
+    // Hover effects
+    option.addEventListener('mouseover', () => {
+        option.style.backgroundColor = '#4d4d4d';
+        option.style.borderColor = '#e18a6c';
+    });
+
+    option.addEventListener('mouseout', () => {
+        option.style.backgroundColor = '#3d3d3d';
+        option.style.borderColor = 'transparent';
+    });
+
+    option.addEventListener('click', action);
+
+    return option;
+}
+
+// Close the branch modal
+function closeBranchModal() {
+    const modal = document.querySelector('#claude-branch-modal');
+    if (modal) {
+        modal.style.opacity = '0';
+        const content = modal.querySelector('div');
+        if (content) {
+            content.style.transform = 'scale(0.8)';
+        }
+        
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+}
+
+// Close modal with escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeBranchModal();
+    }
+});
 
 // Show tooltip for menu items
 function showTooltip(element, text) {
@@ -412,15 +649,22 @@ function branchFromSelection() {
 // Branch and reset the current conversation
 function branchAndReset() {
     console.log("Branch & Reset clicked");
-    showStatus("Branch & Reset - Feature coming soon!", 2000);
+    showStatus("Action 1 - Feature coming soon!", 2000);
     // TODO: Implement branch and reset functionality
 }
 
 // Save current branch state
 function saveBranch() {
     console.log("Save Branch clicked");
-    showStatus("Save Branch - Feature coming soon!", 2000);
+    showStatus("Action 2 - Feature coming soon!", 2000);
     // TODO: Implement branch saving functionality
+}
+
+// Settings/extra option placeholder
+function showSettings() {
+    console.log("Settings clicked");
+    showStatus("Action 3 - Feature coming soon!", 2000);
+    // TODO: Implement settings functionality
 }
 
 // For new chat pages, check if we should load a branch prompt
@@ -501,7 +745,7 @@ function initialize() {
 
 // Run our initialization when the page loads
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
+    document.addEventListener('DOMContentloaded', initialize);
 } else {
     initialize();
 }
