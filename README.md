@@ -3,6 +3,9 @@
 ## Overview
 Claude Branch is a browser extension that allows you to branch your Claude.ai conversations into new tabs. This feature helps you explore different directions from a single conversation without losing context.
 
+<img width="698" alt="Screenshot 2025-05-21 at 4 16 18 PM" src="https://github.com/user-attachments/assets/204f8668-6866-4408-9b9b-97ddcca3af3e" />
+
+
 ## Features
 - Adds a floating "🌿 Branch" button to Claude.ai chat pages
 - Captures the current conversation context when branching
